@@ -10,4 +10,8 @@ dependencies = [
     "langchain-openai>=0.2.10",
     "fastapi[standard]>=0.115.5",
     "pydantic>=2.10.2",
+    "langfuse>=2.55.0",
 ]
+
+[tool.ruff]
+line-length = 120
