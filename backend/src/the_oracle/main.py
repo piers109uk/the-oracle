@@ -5,25 +5,24 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from the_oracle.llm import second_consequences_from_event
+from the_oracle.graph_predictor import generate_second_consequences_from_event
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 class Event(BaseModel):
     event: str
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-
 @app.post("/events")
-async def generate_consequences(event: Event):
-    res = await second_consequences_from_event(event.event)
-    return res
+@limiter.limit("3/day")
+def generate_consequences(request: Request, event: Event):
+    return generate_second_consequences_from_event(event.event)
