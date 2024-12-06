@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Any, TypedDict, cast
 
 from dotenv import load_dotenv
@@ -28,7 +29,6 @@ class Consequences(BaseModel):
 
 
 class SecondConsequences(TypedDict):
-    event: str
     consequence: str
     second_consequences: list[Consequence]
 
@@ -61,7 +61,6 @@ async def second_consequence_from_first_order(
     consequences_res = cast(Consequences, response)
     logger.info(f"Generated second-order consequences for {first_order_consequence}")
     return {
-        "event": event,
         "consequence": first_order_consequence,
         "second_consequences": consequences_res.consequences,
     }
@@ -80,7 +79,9 @@ async def second_consequences_from_event(event: str) -> list[SecondConsequences]
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     event = "LLM technology makes professionals in many industries far more productive."
     second_order = asyncio.run(second_consequences_from_event(event))
-
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
     print(second_order)
