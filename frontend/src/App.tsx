@@ -1,35 +1,66 @@
 import React, { useState } from "react"
 import ReactFlow, { Node, Edge, Background } from "react-flow-renderer"
+import { generateEventConsequences } from "./events"
+import { useNodesState, useEdgesState } from "reactflow"
 
 const App: React.FC = () => {
   const [event, setEvent] = useState("")
-  const [nodes, setNodes] = useState<Node[]>([])
-  const [edges, setEdges] = useState<Edge[]>([])
+  // const [nodes, setNodes] = useState<Node[]>([])
+  // const [edges, setEdges] = useState<Edge[]>([])
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([])
+  const [edges, setEdges] = useEdgesState([])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEvent(e.target.value)
   }
 
-  const generateConsequences = () => {
-    const firstOrder1 = `${event} - First Order Consequence 1`
-    const firstOrder2 = `${event} - First Order Consequence 2`
-    const secondOrder1 = `${firstOrder1} - Second Order Consequence`
-    const secondOrder2 = `${firstOrder2} - Second Order Consequence`
+  // generateEventConsequences()
+  const generateConsequences = async () => {
+    try {
+      const consequences = await generateEventConsequences(event)
 
-    setNodes([
-      { id: "1", data: { label: event }, position: { x: 250, y: 0 } },
-      { id: "2", data: { label: firstOrder1 }, position: { x: 100, y: 100 } },
-      { id: "3", data: { label: firstOrder2 }, position: { x: 400, y: 100 } },
-      { id: "4", data: { label: secondOrder1 }, position: { x: 50, y: 200 } },
-      { id: "5", data: { label: secondOrder2 }, position: { x: 450, y: 200 } },
-    ])
+      const nodes: Node[] = [{ id: "event", data: { label: event }, position: { x: 250, y: 0 } }]
 
-    setEdges([
-      { id: "e1-2", source: "1", target: "2", animated: true },
-      { id: "e1-3", source: "1", target: "3", animated: true },
-      { id: "e2-4", source: "2", target: "4", animated: true },
-      { id: "e3-5", source: "3", target: "5", animated: true },
-    ])
+      const edges: Edge[] = []
+
+      consequences.forEach((firstConsequence, index) => {
+        const firstId = `first-${index}`
+        nodes.push({
+          id: firstId,
+          data: { label: firstConsequence.consequence.consequence },
+          position: { x: 100 + index * 500, y: 150 },
+          draggable: true,
+        })
+        edges.push({
+          id: `e-event-${firstId}`,
+          source: "event",
+          target: firstId,
+          animated: true,
+        })
+
+        firstConsequence.second_consequences.forEach((secondConsequence, sIndex) => {
+          const secondId = `second-${index}-${sIndex}`
+          nodes.push({
+            id: secondId,
+            data: { label: secondConsequence.consequence },
+            position: { x: 50 + index * 500 + sIndex * 200, y: 300 },
+            draggable: true,
+          })
+          edges.push({
+            id: `e-${firstId}-${secondId}`,
+            source: firstId,
+            target: secondId,
+            animated: true,
+          })
+        })
+      })
+
+      setNodes(nodes)
+      setEdges(edges)
+    } catch (error) {
+      console.error("Failed to generate consequences:", error)
+    }
   }
 
   return (
@@ -42,7 +73,7 @@ const App: React.FC = () => {
         </button>
       </div>
       <div className="h-3/4 w-full mt-4 border">
-        <ReactFlow nodes={nodes} edges={edges} fitView>
+        <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} fitView>
           <Background />
         </ReactFlow>
       </div>

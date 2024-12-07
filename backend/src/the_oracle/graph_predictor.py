@@ -22,7 +22,7 @@ class Consequences(BaseModel):
 
 
 class SecondConsequences(TypedDict):
-    event: str
+    # event: str
     consequence: str
     second_consequences: list[Consequence]
 
@@ -44,7 +44,7 @@ class OverallState(TypedDict):
 
 class SecondConsequenceState(TypedDict):
     event: str
-    consequence: str
+    consequence: Consequence
     known_consequences: list[str]
 
 
@@ -64,12 +64,13 @@ def generate_second_consequences(state: SecondConsequenceState):
     second_consequences_prompt = PromptManager.get_prompt_template(Prompts.second_consequences)
     prompt = second_consequences_prompt.format(
         event=state["event"],
-        consequence=state["consequence"],
+        consequence=state["consequence"].consequence,
         known_consequences=state["known_consequences"],
     )
     response = model.with_structured_output(Consequences).invoke(prompt)
     consequences = cast(Consequences, response)
-    return {"second_consequences": [consequences.consequences]}
+    second_consequences = {"second_consequences": consequences.consequences, "consequence": state["consequence"]}
+    return {"second_consequences": [second_consequences]}
 
 
 def to_second_consequences(state: OverallState):
@@ -83,7 +84,7 @@ def to_second_consequences(state: OverallState):
         return ", ".join([c.consequence for c in first_consequences if c.consequence != consequence])
 
     second_consequence_data: list[SecondConsequenceState] = [
-        {"event": state["event"], "consequence": c.consequence, "known_consequences": other_consequences(c.consequence)}
+        {"event": state["event"], "consequence": c, "known_consequences": other_consequences(c.consequence)}
         for c in first_consequences
     ]
     return [Send("generate_second_consequences", x) for x in second_consequence_data]
@@ -111,7 +112,9 @@ app = graph.compile()
 
 
 def generate_second_consequences_from_event(event: str):
-    return app.invoke({"event": event}, config={"callbacks": [langfuse_handler]})
+    res = app.invoke({"event": event}, config={"callbacks": [langfuse_handler]})
+
+    return res.get("aggregated_consequences")
 
 
 if __name__ == "__main__":
