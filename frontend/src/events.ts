@@ -13,6 +13,7 @@ interface SecondConsequence {
 type EventResponse = SecondConsequence[]
 
 export const generateEventConsequences = async (event: string): Promise<EventResponse> => {
+  // return mockRes
   const api = "http://127.0.0.1:8000/events-graph"
   const response = await fetch(api, {
     method: "POST",

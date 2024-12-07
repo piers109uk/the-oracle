@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import ReactFlow, { Node, Edge, Background } from "react-flow-renderer"
 import { generateEventConsequences } from "./events"
 import { useNodesState, useEdgesState } from "reactflow"
+import { Tooltip } from "react-tooltip"
 
 const App: React.FC = () => {
   const [event, setEvent] = useState("")
@@ -28,7 +29,17 @@ const App: React.FC = () => {
         const firstId = `first-${index}`
         nodes.push({
           id: firstId,
-          data: { label: firstConsequence.consequence.consequence },
+          data: {
+            label: (
+              <>
+                <div data-tooltip-id={firstId} data-tooltip-content={firstConsequence.consequence.reasoning}>
+                  <div>{firstConsequence.consequence.consequence}</div>
+                  <div className="text-sm opacity-75">{(firstConsequence.consequence.probability * 100).toFixed(0)}%</div>
+                </div>
+                <Tooltip id={firstId} delayShow={500} />
+              </>
+            ),
+          },
           position: { x: 100 + index * 500, y: 150 },
           draggable: true,
           style: {
@@ -68,7 +79,17 @@ const App: React.FC = () => {
 
           nodes.push({
             id: secondId,
-            data: { label: secondConsequence.consequence },
+            data: {
+              label: (
+                <>
+                  <div data-tooltip-id={secondId} data-tooltip-content={secondConsequence.reasoning}>
+                    <div>{secondConsequence.consequence}</div>
+                    <div className="text-sm opacity-75">{(secondConsequence.probability * 100).toFixed(0)}%</div>
+                  </div>
+                  <Tooltip id={secondId} delayShow={500} />
+                </>
+              ),
+            },
             position: { x, y },
             draggable: true,
             style: {
