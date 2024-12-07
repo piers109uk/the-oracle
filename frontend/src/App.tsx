@@ -31,6 +31,10 @@ const App: React.FC = () => {
           data: { label: firstConsequence.consequence.consequence },
           position: { x: 100 + index * 500, y: 150 },
           draggable: true,
+          style: {
+            background: "#1e40af", // dark blue
+            color: "white", // white text for better contrast
+          },
         })
         edges.push({
           id: `e-event-${firstId}`,
@@ -39,13 +43,38 @@ const App: React.FC = () => {
           animated: true,
         })
 
+        // Calculate positions for second consequences in a grid layout
         firstConsequence.second_consequences.forEach((secondConsequence, sIndex) => {
           const secondId = `second-${index}-${sIndex}`
+
+          // Number of items per row (assuming 130px width + some spacing)
+          const itemsPerRow = 3
+          const nodeWidth = 130
+          const nodeHeight = 130
+          const horizontalSpacing = 30
+          const verticalSpacing = 30
+
+          // Calculate row and column for grid layout
+          const row = Math.floor(sIndex / itemsPerRow)
+          const col = sIndex % itemsPerRow
+
+          // Calculate x position relative to parent
+          const parentX = 100 + index * 500
+          const xOffset = col * (nodeWidth + horizontalSpacing) - ((nodeWidth + horizontalSpacing) * (itemsPerRow - 1)) / 2
+          const x = parentX + xOffset
+
+          // Calculate y position with increasing rows
+          const y = 300 + row * (nodeHeight + verticalSpacing)
+
           nodes.push({
             id: secondId,
             data: { label: secondConsequence.consequence },
-            position: { x: 50 + index * 500 + sIndex * 200, y: 300 },
+            position: { x, y },
             draggable: true,
+            style: {
+              background: "#93c5fd", // light blue
+              color: "#1e1e1e", // dark text for better contrast
+            },
           })
           edges.push({
             id: `e-${firstId}-${secondId}`,
