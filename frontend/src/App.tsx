@@ -1,8 +1,10 @@
 import React, { useState } from "react"
 import ReactFlow, { Background, Edge, Node } from "react-flow-renderer"
 import { useEdgesState, useNodesState } from "reactflow"
-import { Consequence, EventResponse, generateEventConsequences } from "./events"
+import { Consequence, generateEventConsequences } from "./events"
 import NodeLabel from "./NodeLabel"
+
+type NodeType = "root" | "firstLevel" | "secondLevel"
 
 const GRID_CONFIG = {
   itemsPerRow: 3,
@@ -19,7 +21,7 @@ export interface NodeStyles {
   color: string
 }
 
-export const NODE_STYLES = {
+export const NODE_STYLES: Record<NodeType, NodeStyles> = {
   root: { background: "#ffffff", color: "#000000" },
   firstLevel: { background: "#1e40af", color: "white" },
   secondLevel: { background: "#93c5fd", color: "#1e1e1e" },
@@ -139,18 +141,32 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="p-4 mx-auto h-screen">
-      <div className="">
-        <h1 className="text-2xl font-bold mb-4">The Oracle</h1>
-        <input type="text" value={event} onChange={(e) => setEvent(e.target.value)} placeholder="Enter an event" className="border p-2 w-full mb-4" />
-        <button onClick={generateConsequences} className="bg-blue-500 text-white p-2 rounded">
-          Generate Consequences
-        </button>
-        <button onClick={handleReset} className="bg-gray-500 text-white p-2 rounded">
-          Reset Nodes
-        </button>
+    <div className="p-6 mx-auto h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold mb-6 text-gray-800">The Oracle</h1>
+        <input
+          type="text"
+          value={event}
+          onChange={(e) => setEvent(e.target.value)}
+          placeholder="Enter an event"
+          className="border border-gray-300 p-3 w-full mb-6 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+        />
+        <div className="space-x-4 mb-8">
+          <button
+            onClick={generateConsequences}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md transition duration-200 ease-in-out"
+          >
+            Generate Consequences
+          </button>
+          <button
+            onClick={handleReset}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg shadow-md transition duration-200 ease-in-out"
+          >
+            Reset Nodes
+          </button>
+        </div>
       </div>
-      <div className="h-3/4 w-full mt-4 border">
+      <div className="h-3/4 w-full mt-6 border border-gray-200 rounded-xl shadow-lg overflow-hidden">
         <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} fitView>
           <Background />
         </ReactFlow>
