@@ -1,8 +1,8 @@
 import React, { useState } from "react"
-import ReactFlow, { Node, Edge, Background } from "react-flow-renderer"
+import ReactFlow, { Background, Edge, Node } from "react-flow-renderer"
+import { useEdgesState, useNodesState } from "reactflow"
 import { Consequence, EventResponse, generateEventConsequences } from "./events"
-import { useNodesState, useEdgesState } from "reactflow"
-import { Tooltip } from "react-tooltip"
+import NodeLabel from "./NodeLabel"
 
 const GRID_CONFIG = {
   itemsPerRow: 3,
@@ -10,17 +10,20 @@ const GRID_CONFIG = {
   nodeHeight: 130,
   horizontalSpacing: 30,
   verticalSpacing: 30,
+  firstLevelSpacing: 500,
+  firstLevelStartX: 100,
 }
 
-const createNodeLabel = (id: string, data: Consequence) => (
-  <>
-    <div data-tooltip-id={id} data-tooltip-content={data.reasoning}>
-      <div>{data.consequence}</div>
-      <div className="text-sm opacity-75">{(data.probability * 100).toFixed(0)}%</div>
-    </div>
-    <Tooltip id={id} delayShow={500} />
-  </>
-)
+export interface NodeStyles {
+  background: string
+  color: string
+}
+
+export const NODE_STYLES = {
+  root: { background: "#ffffff", color: "#000000" },
+  firstLevel: { background: "#1e40af", color: "white" },
+  secondLevel: { background: "#93c5fd", color: "#1e1e1e" },
+}
 
 const calculateGridPosition = (parentX: number, index: number) => {
   const { itemsPerRow, nodeWidth, nodeHeight, horizontalSpacing, verticalSpacing } = GRID_CONFIG
@@ -34,28 +37,42 @@ const calculateGridPosition = (parentX: number, index: number) => {
   }
 }
 
-const createFirstLevelNode = (event: string, consequence: Consequence, index: number): Node => {
-  const id = `first-${index}`
-  return {
-    id,
-    data: { label: createNodeLabel(id, consequence) },
-    position: { x: 100 + index * 500, y: 150 },
-    draggable: true,
-    style: { background: "#1e40af", color: "white" },
-  }
+const getEventNodePosition = () => ({ x: 250, y: 0 })
+const getFirstLevelPosition = (index: number) => {
+  const { firstLevelStartX, firstLevelSpacing } = GRID_CONFIG
+  return { x: firstLevelStartX + index * firstLevelSpacing, y: 150 }
 }
 
-const createSecondLevelNode = (parentIndex: number, consequence: Consequence, sIndex: number, parentX: number): Node => {
-  const id = `second-${parentIndex}-${sIndex}`
-  const position = calculateGridPosition(parentX, sIndex)
+const getSecondLevelPosition = (parentIndex: number, sIndex: number) => {
+  const { firstLevelStartX, firstLevelSpacing } = GRID_CONFIG
+  const parentX = firstLevelStartX + parentIndex * firstLevelSpacing
+  return calculateGridPosition(parentX, sIndex)
+}
 
-  return {
-    id,
-    data: { label: createNodeLabel(id, consequence) },
-    position,
-    draggable: true,
-    style: { background: "#93c5fd", color: "#1e1e1e" },
-  }
+const NODE_IDS = {
+  event: () => "event",
+  firstLevel: (index: number) => `first-${index}`,
+  secondLevel: (parentIndex: number, sIndex: number) => `second-${parentIndex}-${sIndex}`,
+} as const
+
+const createEventNode = (eventText: string): Node => ({
+  id: NODE_IDS.event(),
+  data: { label: eventText },
+  position: getEventNodePosition(),
+  draggable: true,
+  style: NODE_STYLES.root,
+})
+
+const createFirstLevelNode = (consequence: Consequence, index: number): Node => {
+  const id = NODE_IDS.firstLevel(index)
+  const position = getFirstLevelPosition(index)
+  return { id, data: { label: NodeLabel({ id, consequence }) }, position, draggable: true, style: NODE_STYLES.firstLevel }
+}
+
+const createSecondLevelNode = (parentIndex: number, consequence: Consequence, sIndex: number): Node => {
+  const id = NODE_IDS.secondLevel(parentIndex, sIndex)
+  const position = getSecondLevelPosition(parentIndex, sIndex)
+  return { id, data: { label: NodeLabel({ id, consequence }) }, position, draggable: true, style: NODE_STYLES.secondLevel }
 }
 
 const createEdge = (source: string, target: string): Edge => ({
@@ -65,6 +82,27 @@ const createEdge = (source: string, target: string): Edge => ({
   animated: true,
 })
 
+const resetNodePositions = (nodes: Node[]): Node[] => {
+  return nodes.map((node) => {
+    // Preserve all node data, only update position
+    if (node.id === "event") {
+      return { ...node, position: getEventNodePosition() }
+    }
+
+    if (node.id.startsWith("first-")) {
+      const index = parseInt(node.id.split("-")[1])
+      return { ...node, position: getFirstLevelPosition(index) }
+    }
+
+    if (node.id.startsWith("second-")) {
+      const [_, parentIndex, sIndex] = node.id.split("-").map(Number)
+      return { ...node, position: getSecondLevelPosition(parentIndex, sIndex) }
+    }
+
+    return node
+  })
+}
+
 const App: React.FC = () => {
   const [event, setEvent] = useState("")
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -72,20 +110,19 @@ const App: React.FC = () => {
 
   const generateConsequences = async () => {
     try {
-      const consequenceGroups: EventResponse = await generateEventConsequences(event)
-      const newNodes: Node[] = [{ id: "event", data: { label: event }, position: { x: 250, y: 0 } }]
+      const consequenceGroups = await generateEventConsequences(event)
+      const newNodes: Node[] = [createEventNode(event)]
       const newEdges: Edge[] = []
 
       consequenceGroups.forEach((consequenceGroup, index) => {
         const firstId = `first-${index}`
-        const firstLevelNode = createFirstLevelNode(event, consequenceGroup.consequence, index)
+        const firstLevelNode = createFirstLevelNode(consequenceGroup.consequence, index)
         newNodes.push(firstLevelNode)
         newEdges.push(createEdge("event", firstId))
 
-        const parentX = 100 + index * 500
         consequenceGroup.second_consequences.forEach((secondConsequence, sIndex) => {
           const secondId = `second-${index}-${sIndex}`
-          newNodes.push(createSecondLevelNode(index, secondConsequence, sIndex, parentX))
+          newNodes.push(createSecondLevelNode(index, secondConsequence, sIndex))
           newEdges.push(createEdge(firstId, secondId))
         })
       })
@@ -97,6 +134,10 @@ const App: React.FC = () => {
     }
   }
 
+  const handleReset = () => {
+    setNodes(resetNodePositions(nodes))
+  }
+
   return (
     <div className="p-4 mx-auto h-screen">
       <div className="">
@@ -104,6 +145,9 @@ const App: React.FC = () => {
         <input type="text" value={event} onChange={(e) => setEvent(e.target.value)} placeholder="Enter an event" className="border p-2 w-full mb-4" />
         <button onClick={generateConsequences} className="bg-blue-500 text-white p-2 rounded">
           Generate Consequences
+        </button>
+        <button onClick={handleReset} className="bg-gray-500 text-white p-2 rounded">
+          Reset Nodes
         </button>
       </div>
       <div className="h-3/4 w-full mt-4 border">
