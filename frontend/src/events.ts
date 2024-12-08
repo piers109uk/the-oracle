@@ -1,16 +1,16 @@
 import mockRes from "./mock-res.json"
-interface Consequence {
+export interface Consequence {
   consequence: string
   probability: number
   reasoning: string
 }
 
-interface SecondConsequence {
+export interface ConsequenceGroup {
   consequence: Consequence
   second_consequences: Consequence[]
 }
 
-type EventResponse = SecondConsequence[]
+export type EventResponse = ConsequenceGroup[]
 
 export const generateEventConsequences = async (event: string): Promise<EventResponse> => {
   // return mockRes
