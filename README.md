@@ -8,6 +8,10 @@ Even then, it's easy to bias yourself in favour of things you have been thinking
 
 I believe that by using LLMs to generate possible consequences en masse, you can reduce cognitive load on yourself significantly while staying true to the core idea.
 
+### Example
+
+![[./examples/productive.png]]
+
 ## Disclaimer
 
 This is a personal project. There are a **huge** number of things I would do differently if I were building this for serious production use.
